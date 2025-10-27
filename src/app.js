@@ -103,7 +103,7 @@ app.use((err, req, res, next) => {
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb+srv://root:root@cluster0.or0uomh.mongodb.net/", {
+    await mongoose.connect("mongodb+srv://root:root@cluster0.or0uomh.mongodb.net/secretcalc", {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
