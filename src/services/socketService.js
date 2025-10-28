@@ -86,12 +86,23 @@ function initializeSocket(io) {
     });
     
     // Handle sending a message
-    socket.on('message:send', async ({ roomId, type, content, replyTo }) => {
+    socket.on('message:send', async ({ roomId, type, content, replyTo }, callback) => {
       try {
+        console.log(`📨 Message received from ${socket.userId}: type=${type}`);
+        
         const room = await Room.findById(roomId);
         
         if (!room || !room.members.includes(socket.userId)) {
+          console.error(`❌ Access denied: user not in room ${roomId}`);
           socket.emit('error', { message: 'Access denied' });
+          if (callback) callback({ success: false, error: 'Access denied' });
+          return;
+        }
+        
+        // Validate content
+        if (!content || content.toString().trim().length === 0) {
+          console.error('❌ Empty message content');
+          if (callback) callback({ success: false, error: 'Message cannot be empty' });
           return;
         }
         
@@ -111,8 +122,16 @@ function initializeSocket(io) {
         room.lastMessageAt = new Date();
         await room.save();
         
-        // Broadcast to all room members
+        console.log(`✅ Message saved: ${message._id}`);
+        
+        // Send acknowledgment to sender
+        if (callback) {
+          callback({ success: true, messageId: message._id });
+        }
+        
+        // Broadcast to all room members (including sender)
         io.to(roomId).emit('message:recv', message);
+        console.log(`📢 Message broadcast to room: ${roomId}`);
         
         // Send push notification to offline users
         const partnerIds = room.members.filter(id => id.toString() !== socket.userId);
@@ -124,7 +143,9 @@ function initializeSocket(io) {
           }
         }
       } catch (error) {
+        console.error('❌ Message send error:', error);
         socket.emit('error', { message: error.message });
+        if (callback) callback({ success: false, error: error.message });
       }
     });
     
