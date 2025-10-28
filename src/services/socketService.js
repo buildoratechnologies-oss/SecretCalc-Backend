@@ -49,6 +49,12 @@ function initializeSocket(io) {
     const rooms = await Room.find({ members: socket.userId });
     rooms.forEach(room => {
       socket.join(room._id.toString());
+      
+      // Notify room members that user is online
+      socket.to(room._id.toString()).emit('user:online', {
+        userId: socket.userId,
+        username: socket.user.username
+      });
     });
     
     // Handle joining a chat room
@@ -175,10 +181,22 @@ function initializeSocket(io) {
       
       userSockets.delete(socket.userId);
       
+      const lastSeen = new Date();
+      
       // Update user offline status
       await User.findByIdAndUpdate(socket.userId, {
         isOnline: false,
-        lastSeen: new Date()
+        lastSeen
+      });
+      
+      // Get user's rooms to notify members
+      const rooms = await Room.find({ members: socket.userId });
+      rooms.forEach(room => {
+        socket.to(room._id.toString()).emit('user:offline', {
+          userId: socket.userId,
+          username: socket.user.username,
+          lastSeen
+        });
       });
     });
   });
