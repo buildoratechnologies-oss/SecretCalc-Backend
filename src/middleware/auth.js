@@ -30,7 +30,8 @@ const authMiddleware = async (req, res, next) => {
         message: 'User not found. Token may be invalid.'
       });
     }
-    
+    console.log("ppp")
+    console.log(user)
     // Attach user to request
     req.user = user;
     req.userId = user._id;

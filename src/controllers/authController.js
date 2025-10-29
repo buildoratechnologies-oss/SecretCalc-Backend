@@ -111,15 +111,17 @@ exports.verifyPin = async (req, res) => {
   try {
     const { pin } = req.body;
     const user = req.user;
-    
-    if (!user.pinHash) {
+    let data=await User.findOne({email:user?.email},"pinHash")
+    console.log("rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
+    console.log(data)
+    if (!data.pinHash) {
       return res.status(400).json({
         success: false,
         message: 'No PIN set for this account'
       });
     }
     
-    const isPinValid = await user.comparePin(pin);
+    const isPinValid = await data.comparePin(pin);
     
     if (!isPinValid) {
       return res.status(401).json({
