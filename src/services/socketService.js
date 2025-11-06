@@ -138,8 +138,23 @@ function initializeSocket(io) {
         for (const partnerId of partnerIds) {
           const partner = await User.findById(partnerId);
           if (!partner.isOnline && partner.pushToken) {
-            // TODO: Send push notification via Expo
-            console.log(`📱 Push notification to ${partner.username}`);
+            try {
+              const { notifyUsers } = require('./pushService');
+              const preview = type === 'text' ? content.slice(0, 120) : type.toUpperCase();
+              await notifyUsers([partner.pushToken], {
+                title: socket.user.username || 'New message',
+                body: preview,
+                data: {
+                  type: 'chat_message',
+                  roomId: roomId.toString(),
+                  messageId: message._id.toString(),
+                  senderId: socket.userId,
+                  senderName: socket.user.username
+                }
+              });
+            } catch (e) {
+              console.error('Push send failed:', e.message);
+            }
           }
         }
       } catch (error) {

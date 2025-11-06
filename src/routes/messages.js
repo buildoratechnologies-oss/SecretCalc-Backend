@@ -40,6 +40,32 @@ router.post('/', authMiddleware, messageValidation, async (req, res) => {
     room.members.forEach(memberId => {
       io.to(memberId.toString()).emit('message:recv', message);
     });
+
+    // Send push to offline recipients
+    try {
+      const User = require('../models/User');
+      const { notifyUsers } = require('../services/pushService');
+      const partnerIds = room.members.filter(id => id.toString() !== req.userId.toString());
+      for (const partnerId of partnerIds) {
+        const partner = await User.findById(partnerId);
+        if (!partner.isOnline && partner.pushToken) {
+          const preview = type === 'text' ? content.slice(0, 120) : type.toUpperCase();
+          await notifyUsers([partner.pushToken], {
+            title: message.sender.username || 'New message',
+            body: preview,
+            data: {
+              type: 'chat_message',
+              roomId: roomId.toString(),
+              messageId: message._id.toString(),
+              senderId: req.userId.toString(),
+              senderName: message.sender.username
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Push send failed:', e.message);
+    }
     
     res.status(201).json({
       success: true,
